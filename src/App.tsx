@@ -186,7 +186,7 @@ function App() {
 
         {/* Footer */}
         <div className="text-center mt-20 pb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 s border border-white/20 max-w-md mx-auto">
+          <div className="backdrop-blur-sm rounded-2xl p-6 s border border-white/20 max-w-md mx-auto">
             {/* <p className="text-gray-600 mb-2">
               Made with ❤️ in India
             </p> */}
