@@ -7,13 +7,15 @@ interface BillManagerProps {
   bills: Bill[];
   onAddBill: (bill: Bill) => void;
   onRemoveBill: (billId: string) => void;
+  className?: string;
 }
 
 const BillManager: React.FC<BillManagerProps> = ({
   participants,
   bills,
   onAddBill,
-  onRemoveBill
+  onRemoveBill,
+  className
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [totalAmount, setTotalAmount] = useState('');
@@ -81,7 +83,7 @@ const BillManager: React.FC<BillManagerProps> = ({
   }
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+    <div className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 ${className}`}>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Receipt className="w-5 h-5 text-green-600" />

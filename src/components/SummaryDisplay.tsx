@@ -6,12 +6,14 @@ interface SummaryDisplayProps {
   participants: Participant[];
   amounts: { [key: number]: number };
   bills: Bill[];
+  className?: string;
 }
 
 const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
   participants,
   amounts,
-  bills
+  bills,
+  className
 }) => {
   const totalAmount = Object.values(amounts).reduce((sum, amount) => sum + amount, 0);
   const averageAmount = participants.length > 0 ? totalAmount / participants.length : 0;
@@ -32,7 +34,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${className}`}>
       {/* Summary Card */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
         <div className="flex items-center gap-3 mb-6">

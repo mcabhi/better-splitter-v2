@@ -95,7 +95,7 @@ function App() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-3 bg-white/70 backdrop-blur-sm px-8 py-4 rounded-full shadow-lg mb-4">
+          <div className="inline-flex items-center gap-3 backdrop-blur-sm px-8 py-4 rounded-full  mb-4">
             <Calculator className="w-8 h-8 text-blue-600" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Better Splitter
@@ -106,9 +106,9 @@ function App() {
           </p>
         </div>
 
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:items-stretch flex-grow">
           {/* Left Column - Participants */}
-          <div className="space-y-8">
+          <div className="space-y-8 flex flex-col h-full flex-grow lg:col-span-2">
             <ParticipantManager
               participants={participants}
               onAddParticipant={addParticipant}
@@ -141,7 +141,7 @@ function App() {
           </div>
 
           {/* Middle Column - Bills */}
-          <div>
+          <div className="flex flex-col h-full flex-grow">
             <BillManager
               participants={participants}
               bills={bills}
@@ -151,7 +151,7 @@ function App() {
           </div>
 
           {/* Right Column - Summary */}
-          <div>
+          <div className="flex flex-col h-full flex-grow">
             <SummaryDisplay
               participants={participants}
               amounts={amounts}
@@ -174,9 +174,9 @@ function App() {
         )}
 
         {/* Footer */}
-        <div className="text-center mt-16 pb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 max-w-md mx-auto">
-            <p className="text-gray-600 mb-3">
+        <div className="text-center mt-20 pb-8">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 s border border-white/20 max-w-md mx-auto">
+            <p className="text-gray-600 mb-2">
               Made with ❤️ in India
             </p>
             <a
@@ -185,7 +185,7 @@ function App() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
             >
-              Contribute to the open source project
+              Contribute
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
