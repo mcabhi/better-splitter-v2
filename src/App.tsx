@@ -173,16 +173,25 @@ function App() {
           </div>
         )}
 
-        {/* Empty State */}
-        {participants.length === 0 && (
-          <div className="text-center py-16">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-12 shadow-lg border border-white/20 max-w-md mx-auto">
-              <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">Get Started</h3>
-              <p className="text-gray-500">Add some participants to begin splitting bills!</p>
-            </div>
+        {/* Footer */}
+        <div className="text-center mt-16 pb-8">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 max-w-md mx-auto">
+            <p className="text-gray-600 mb-3">
+              Made with ❤️ in India
+            </p>
+            <a
+              href="https://github.com/mcabhi/better-splitter-v2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
+            >
+              Contribute to the open source project
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </a>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
