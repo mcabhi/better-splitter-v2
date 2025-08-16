@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, Receipt, Trash2, DollarSign } from 'lucide-react';
+import { Plus, Receipt, Trash2, DollarSign, Pencil } from 'lucide-react';
 import { Participant, Bill, BillSplit } from '../types';
 
 interface BillManagerProps {
   participants: Participant[];
   bills: Bill[];
-  onAddBill: (bill: Bill) => void;
+  onSaveBill: (bill: Bill) => void;
   onRemoveBill: (billId: string) => void;
   className?: string;
 }
@@ -13,14 +13,17 @@ interface BillManagerProps {
 const BillManager: React.FC<BillManagerProps> = ({
   participants,
   bills,
-  onAddBill,
+  onSaveBill,
   onRemoveBill,
   className
 }) => {
   const [isAdding, setIsAdding] = useState(false);
+  const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [totalAmount, setTotalAmount] = useState('');
+  const  [description, setDescription] = useState('');
   const [splits, setSplits] = useState<BillSplit[]>([]);
   const [currentSplitAmount, setCurrentSplitAmount] = useState('');
+  const [currentSplitDescription, setCurrentSplitDescription] = useState('');
   const [selectedParticipants, setSelectedParticipants] = useState<number[]>([]);
 
   const totalSplitAmount = splits.reduce((sum, split) => sum + split.amount, 0);
@@ -29,8 +32,9 @@ const BillManager: React.FC<BillManagerProps> = ({
   const handleAddSplit = () => {
     const amount = parseFloat(currentSplitAmount);
     if (amount > 0 && selectedParticipants.length > 0 && amount <= remainingAmount) {
-      setSplits([...splits, { amount, participantIds: [...selectedParticipants] }]);
+      setSplits([...splits, { amount, participantIds: [...selectedParticipants], description: currentSplitDescription }]);
       setCurrentSplitAmount('');
+      setCurrentSplitDescription('');
       setSelectedParticipants([]);
     }
   };
@@ -42,14 +46,15 @@ const BillManager: React.FC<BillManagerProps> = ({
   const handleSubmitBill = () => {
     const total = parseFloat(totalAmount);
     if (total > 0) {
-      const newBill: Bill = {
-        id: Date.now().toString(),
+      const billToSave: Bill = {
+        id: editingBillId || Date.now().toString(),
         total,
         splits,
         remainingAmount: Math.max(0, remainingAmount),
-        createdAt: new Date()
+        createdAt: editingBillId ? bills.find(b => b.id === editingBillId)?.createdAt || new Date() : new Date(),
+        description: description
       };
-      onAddBill(newBill);
+      onSaveBill(billToSave);
       
       // Reset form
       setTotalAmount('');
@@ -57,6 +62,9 @@ const BillManager: React.FC<BillManagerProps> = ({
       setCurrentSplitAmount('');
       setSelectedParticipants([]);
       setIsAdding(false);
+      setDescription('');
+      setCurrentSplitDescription('');
+      setEditingBillId(null);
     }
   };
 
@@ -68,6 +76,25 @@ const BillManager: React.FC<BillManagerProps> = ({
 
   const selectAllParticipants = () => {
     setSelectedParticipants(participants.map(p => p.id));
+  };
+
+  const handleEditBill = (billId: string) => {
+    const billToEdit = bills.find(bill => bill.id === billId);
+    if (billToEdit) {
+      setEditingBillId(billId);
+      setIsAdding(true);
+      setTotalAmount(billToEdit.total.toString());
+      setDescription(billToEdit.description);
+      setSplits(billToEdit.splits);
+      // For selected participants, we need to get all unique participant IDs from all splits
+      const allSplitParticipantIds = new Set<number>();
+      billToEdit.splits.forEach(split => {
+        split.participantIds.forEach(id => allSplitParticipantIds.add(id));
+      });
+      setSelectedParticipants(Array.from(allSplitParticipantIds));
+      setCurrentSplitAmount(''); // Clear current split input
+      setCurrentSplitDescription(''); // Clear current split description
+    }
   };
 
   if (participants.length === 0) {
@@ -118,6 +145,20 @@ const BillManager: React.FC<BillManagerProps> = ({
             />
           </div>
 
+          {/* Description */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g., Dinner at ABC Restaurant (Optional)"
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+
           {/* Split Section */}
           {parseFloat(totalAmount || '0') > 0 && (
             <div className="mb-4">
@@ -135,6 +176,14 @@ const BillManager: React.FC<BillManagerProps> = ({
                   value={currentSplitAmount}
                   onChange={(e) => setCurrentSplitAmount(e.target.value)}
                   placeholder="Enter amount to split"
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+
+                <input
+                  type="text"
+                  value={currentSplitDescription}
+                  onChange={(e) => setCurrentSplitDescription(e.target.value)}
+                  placeholder="e.g., John's share for drinks (Optional)"
                   className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
 
@@ -168,7 +217,7 @@ const BillManager: React.FC<BillManagerProps> = ({
                 <button
                   onClick={handleAddSplit}
                   disabled={!currentSplitAmount || selectedParticipants.length === 0 || parseFloat(currentSplitAmount) > remainingAmount}
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Add Split
                 </button>
@@ -208,7 +257,7 @@ const BillManager: React.FC<BillManagerProps> = ({
               disabled={!totalAmount || parseFloat(totalAmount) <= 0}
               className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Add Bill
+              {editingBillId ? 'Save Changes' : 'Add Bill'}
             </button>
             <button
               onClick={() => {
@@ -217,6 +266,9 @@ const BillManager: React.FC<BillManagerProps> = ({
                 setSplits([]);
                 setCurrentSplitAmount('');
                 setSelectedParticipants([]);
+                setDescription('');
+                setCurrentSplitDescription('');
+                setEditingBillId(null);
               }}
               className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
             >
@@ -240,14 +292,27 @@ const BillManager: React.FC<BillManagerProps> = ({
                   <div className="text-sm text-gray-500">
                     {new Date(bill.createdAt).toLocaleDateString()}
                   </div>
+                  {bill.description && (
+                    <div className="text-xs text-gray-500 italic">
+                      {bill.description}
+                    </div>
+                  )}
                 </div>
               </div>
-              <button
-                onClick={() => onRemoveBill(bill.id)}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleEditBill(bill.id)}
+                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => onRemoveBill(bill.id)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             
             {bill.splits.length > 0 && (
@@ -258,6 +323,9 @@ const BillManager: React.FC<BillManagerProps> = ({
                     ₹{split.amount.toFixed(2)} → {split.participantIds.map(id => 
                       participants.find(p => p.id === id)?.name
                     ).join(', ')}
+                    {split.description && (
+                      <span className="italic text-gray-500"> ({split.description})</span>
+                    )}
                   </div>
                 ))}
               </div>

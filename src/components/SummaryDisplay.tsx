@@ -77,10 +77,10 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
                     <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100/80 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${
-                          index === 0 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
-                          index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-500' :
-                          index === 2 ? 'bg-gradient-to-r from-amber-600 to-amber-700' :
-                          'bg-gradient-to-r from-blue-500 to-purple-500'
+                          index === 0 ? 'bg-gradient-to-r from-yellow-300 to-yellow-500' :
+                          index === 1 ? 'bg-gradient-to-r from-gray-300 to-gray-400' :
+                          index === 2 ? 'bg-gradient-to-r from-orange-400 to-orange-600' :
+                          'bg-gradient-to-r from-cyan-500 to-blue-600'
                         }`}>
                           {index < 3 ? (index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉') : participant.id}
                         </div>
@@ -122,8 +122,15 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
           <div className="space-y-3">
             {bills.slice(-3).reverse().map((bill, index) => (
               <div key={bill.id} className="flex items-center justify-between p-3 bg-gray-50/80 rounded-lg">
-                <div className="text-sm text-gray-600">
-                  Bill #{bills.length - index}
+                <div>
+                  <div className="text-sm text-gray-600">
+                    Bill #{bills.length - index}
+                  </div>
+                  {bill.description && (
+                    <div className="text-xs text-gray-500 italic">
+                      {bill.description}
+                    </div>
+                  )}
                 </div>
                 <div className="font-semibold text-gray-800">₹{bill.total.toFixed(2)}</div>
               </div>

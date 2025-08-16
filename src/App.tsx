@@ -80,8 +80,19 @@ function App() {
     })));
   };
 
-  const addBill = (bill: Bill) => {
-    setBills([...bills, bill]);
+  const saveBill = (billToSave: Bill) => {
+    setBills(prevBills => {
+      const existingBillIndex = prevBills.findIndex(bill => bill.id === billToSave.id);
+      if (existingBillIndex > -1) {
+        // Update existing bill
+        const updatedBills = [...prevBills];
+        updatedBills[existingBillIndex] = billToSave;
+        return updatedBills;
+      } else {
+        // Add new bill
+        return [...prevBills, billToSave];
+      }
+    });
   };
 
   const removeBill = (billId: string) => {
@@ -97,7 +108,7 @@ function App() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-3 backdrop-blur-sm px-8 py-4 rounded-full  mb-4">
             <Calculator className="w-8 h-8 text-blue-600" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
               Better Splitter
             </h1>
           </div>
@@ -116,7 +127,7 @@ function App() {
             />
 
             {/* Quick Stats */}
-            {participants.length > 0 && (
+            {/* {participants.length > 0 && (
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
                 <div className="flex items-center gap-3 mb-4">
                   <Users className="w-5 h-5 text-blue-600" />
@@ -137,7 +148,7 @@ function App() {
                   </div>
                 </div>
               </div>
-            )}
+            )} */}
           </div>
 
           {/* Middle Column - Bills */}
@@ -145,7 +156,7 @@ function App() {
             <BillManager
               participants={participants}
               bills={bills}
-              onAddBill={addBill}
+              onSaveBill={saveBill}
               onRemoveBill={removeBill}
             />
           </div>

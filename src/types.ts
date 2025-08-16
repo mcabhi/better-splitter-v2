@@ -6,6 +6,7 @@ export interface Participant {
 export interface BillSplit {
   amount: number;
   participantIds: number[];
+  description?: string;
 }
 
 export interface Bill {
@@ -14,4 +15,5 @@ export interface Bill {
   splits: BillSplit[];
   remainingAmount: number;
   createdAt: Date;
+  description: string;
 }

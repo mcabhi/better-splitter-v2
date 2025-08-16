@@ -50,7 +50,7 @@ const ParticipantManager: React.FC<ParticipantManagerProps> = ({
       </form>
 
       {/* Participants List */}
-      <div className="space-y-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 gap-4">
         {participants.map((participant) => (
           <div
             key={participant.id}
@@ -73,7 +73,7 @@ const ParticipantManager: React.FC<ParticipantManagerProps> = ({
         ))}
         
         {participants.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-gray-500 col-span-2">
             <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>No participants yet</p>
             <p className="text-sm">Add someone to get started!</p>
