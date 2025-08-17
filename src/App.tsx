@@ -3,6 +3,7 @@ import { Plus, Trash2, Users, Calculator, RefreshCw } from 'lucide-react';
 import ParticipantManager from './components/ParticipantManager';
 import BillManager from './components/BillManager';
 import SummaryDisplay from './components/SummaryDisplay';
+import ConfirmModal from './components/ConfirmModal';
 import { Participant, Bill, BillSplit } from './types';
 import { calculateAmounts } from './utils/billCalculator';
 import { Analytics } from '@vercel/analytics/react';
@@ -52,14 +53,23 @@ function App() {
     }
   }, [participants, bills]);
 
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   const clearAllData = () => {
-    if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-      setParticipants([]);
-      setBills([]);
-      setAmounts({});
-      localStorage.removeItem('billSplitter_participants');
-      localStorage.removeItem('billSplitter_bills');
-    }
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmClear = () => {
+    setParticipants([]);
+    setBills([]);
+    setAmounts({});
+    localStorage.removeItem('billSplitter_participants');
+    localStorage.removeItem('billSplitter_bills');
+    setShowConfirmModal(false);
+  };
+
+  const handleCancelClear = () => {
+    setShowConfirmModal(false);
   };
 
   const addParticipant = (name: string) => {
@@ -207,6 +217,12 @@ function App() {
         </div>
       </div>
       <Analytics />
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        message="Are you sure you want to clear all data? This action cannot be undone."
+        onConfirm={handleConfirmClear}
+        onCancel={handleCancelClear}
+      />
     </div>
   );
 }
