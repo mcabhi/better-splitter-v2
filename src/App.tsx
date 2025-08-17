@@ -5,7 +5,8 @@ import BillManager from './components/BillManager';
 import SummaryDisplay from './components/SummaryDisplay';
 import { Participant, Bill, BillSplit } from './types';
 import { calculateAmounts } from './utils/billCalculator';
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from '@vercel/analytics/react';
+
 
 function App() {
   const [participants, setParticipants] = useState<Participant[]>([]);
