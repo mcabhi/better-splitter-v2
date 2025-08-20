@@ -231,6 +231,9 @@ const BillManager: React.FC<BillManagerProps> = ({
                     <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border">
                       <div className="flex-1">
                         <span className="font-medium">₹{split.amount.toFixed(2)}</span>
+                        {split.description && (
+                            <span className=" text-gray-500"> ({split.description})</span>
+                          )}
                         <div className="text-sm text-gray-600">
                           Split among: {split.participantIds.map(id => 
                             participants.find(p => p.id === id)?.name
@@ -251,6 +254,7 @@ const BillManager: React.FC<BillManagerProps> = ({
           )}
 
           {/* Action Buttons */}
+          <p className="text-sm text-gray-500 mb-2 text-center">(Remaining amount will be split equally among all participants)</p>
           <div className="flex gap-2">
             <button
               onClick={handleSubmitBill}
