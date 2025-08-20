@@ -20,7 +20,7 @@ const BillManager: React.FC<BillManagerProps> = ({
   const [isAdding, setIsAdding] = useState(false);
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [totalAmount, setTotalAmount] = useState('');
-  const  [description, setDescription] = useState('');
+  const [description, setDescription] = useState('');
   const [splits, setSplits] = useState<BillSplit[]>([]);
   const [currentSplitAmount, setCurrentSplitAmount] = useState('');
   const [currentSplitDescription, setCurrentSplitDescription] = useState('');
@@ -55,7 +55,7 @@ const BillManager: React.FC<BillManagerProps> = ({
         description: description
       };
       onSaveBill(billToSave);
-      
+
       // Reset form
       setTotalAmount('');
       setSplits([]);
@@ -130,7 +130,7 @@ const BillManager: React.FC<BillManagerProps> = ({
       {isAdding && (
         <div className="mb-6 p-4 bg-green-50/80 rounded-xl border border-green-200">
           <h3 className="font-semibold text-gray-800 mb-4">Add New Bill</h3>
-          
+
           {/* Total Amount */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -202,11 +202,10 @@ const BillManager: React.FC<BillManagerProps> = ({
                       <button
                         key={participant.id}
                         onClick={() => toggleParticipant(participant.id)}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                          selectedParticipants.includes(participant.id)
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedParticipants.includes(participant.id)
                             ? 'bg-green-600 text-white'
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`}
+                          }`}
                       >
                         {participant.name}
                       </button>
@@ -232,10 +231,10 @@ const BillManager: React.FC<BillManagerProps> = ({
                       <div className="flex-1">
                         <span className="font-medium">₹{split.amount.toFixed(2)}</span>
                         {split.description && (
-                            <span className=" text-gray-500"> ({split.description})</span>
-                          )}
+                          <span className=" text-gray-500"> ({split.description})</span>
+                        )}
                         <div className="text-sm text-gray-600">
-                          Split among: {split.participantIds.map(id => 
+                          Split among: {split.participantIds.map(id =>
                             participants.find(p => p.id === id)?.name
                           ).join(', ')}
                         </div>
@@ -254,7 +253,8 @@ const BillManager: React.FC<BillManagerProps> = ({
           )}
 
           {/* Action Buttons */}
-          <p className="text-sm text-gray-500 mb-2 text-center">(Remaining amount will be split equally among all participants)</p>
+          {remainingAmount > 0 && (
+            <p className="text-sm text-gray-500 mb-2 text-center">(Remaining amount will be split equally among all participants)</p>)}
           <div className="flex gap-2">
             <button
               onClick={handleSubmitBill}
@@ -318,13 +318,13 @@ const BillManager: React.FC<BillManagerProps> = ({
                 </button>
               </div>
             </div>
-            
+
             {bill.splits.length > 0 && (
               <div className="text-sm text-gray-600 mb-2">
                 <div className="font-medium">Splits:</div>
                 {bill.splits.map((split, splitIndex) => (
                   <div key={splitIndex} className="ml-2">
-                    ₹{split.amount.toFixed(2)} → {split.participantIds.map(id => 
+                    ₹{split.amount.toFixed(2)} → {split.participantIds.map(id =>
                       participants.find(p => p.id === id)?.name
                     ).join(', ')}
                     {split.description && (
@@ -334,7 +334,7 @@ const BillManager: React.FC<BillManagerProps> = ({
                 ))}
               </div>
             )}
-            
+
             {bill.remainingAmount > 0 && (
               <div className="text-sm text-gray-600">
                 <span className="font-medium">Remaining amount:</span> ₹{bill.remainingAmount.toFixed(2)} (split equally)
