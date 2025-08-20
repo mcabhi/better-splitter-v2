@@ -11,7 +11,18 @@ export const calculateAmounts = (participants: Participant[], bills: Bill[]): { 
   bills.forEach(bill => {
     // Add splittable amounts
     bill.splits.forEach(split => {
-      if (split.participantIds.length > 0) {
+      if (split.shares && Object.keys(split.shares).length > 0) {
+        const totalShares = Object.values(split.shares).reduce((sum, share) => sum + share, 0);
+        if (totalShares > 0) {
+          for (const participantId in split.shares) {
+            const id = Number(participantId);
+            const share = split.shares[id];
+            if (amounts[id] !== undefined) {
+              amounts[id] += (split.amount * share) / totalShares;
+            }
+          }
+        }
+      } else if (split.participantIds.length > 0) {
         const amountPerPerson = split.amount / split.participantIds.length;
         split.participantIds.forEach(id => {
           if (amounts[id] !== undefined) {

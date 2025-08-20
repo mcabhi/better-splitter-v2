@@ -7,6 +7,7 @@ export interface BillSplit {
   amount: number;
   participantIds: number[];
   description?: string;
+  shares?: { [key: number]: number };
 }
 
 export interface Bill {

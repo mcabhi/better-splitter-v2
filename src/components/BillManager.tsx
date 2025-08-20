@@ -25,17 +25,30 @@ const BillManager: React.FC<BillManagerProps> = ({
   const [currentSplitAmount, setCurrentSplitAmount] = useState('');
   const [currentSplitDescription, setCurrentSplitDescription] = useState('');
   const [selectedParticipants, setSelectedParticipants] = useState<number[]>([]);
+  const [splitType, setSplitType] = useState<'equal' | 'shares'>('equal');
+  const [currentSplitShares, setCurrentSplitShares] = useState<{ [key: number]: number }>({});
 
   const totalSplitAmount = splits.reduce((sum, split) => sum + split.amount, 0);
   const remainingAmount = parseFloat(totalAmount || '0') - totalSplitAmount;
 
   const handleAddSplit = () => {
     const amount = parseFloat(currentSplitAmount);
-    if (amount > 0 && selectedParticipants.length > 0 && amount <= remainingAmount) {
-      setSplits([...splits, { amount, participantIds: [...selectedParticipants], description: currentSplitDescription }]);
-      setCurrentSplitAmount('');
-      setCurrentSplitDescription('');
-      setSelectedParticipants([]);
+    if (splitType === 'equal') {
+      if (amount > 0 && selectedParticipants.length > 0 && amount <= remainingAmount) {
+        setSplits([...splits, { amount, participantIds: [...selectedParticipants], description: currentSplitDescription }]);
+        setCurrentSplitAmount('');
+        setCurrentSplitDescription('');
+        setSelectedParticipants([]);
+      }
+    } else if (splitType === 'shares') {
+      const totalShares = Object.values(currentSplitShares).reduce((sum, share) => sum + share, 0);
+      if (amount > 0 && totalShares > 0 && amount <= remainingAmount) {
+        setSplits([...splits, { amount, shares: currentSplitShares, description: currentSplitDescription }]);
+        setCurrentSplitAmount('');
+        setCurrentSplitDescription('');
+        setSelectedParticipants([]);
+        setCurrentSplitShares({});
+      }
     }
   };
 
@@ -65,17 +78,39 @@ const BillManager: React.FC<BillManagerProps> = ({
       setDescription('');
       setCurrentSplitDescription('');
       setEditingBillId(null);
+      setSplitType('equal'); // Reset split type
+      setCurrentSplitShares({}); // Reset shares
     }
   };
 
   const toggleParticipant = (id: number) => {
-    setSelectedParticipants(prev =>
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-    );
+    setSelectedParticipants(prev => {
+      const newSelection = prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id];
+      if (splitType === 'shares') {
+        setCurrentSplitShares(prevShares => {
+          const newShares = { ...prevShares };
+          if (newSelection.includes(id)) {
+            newShares[id] = newShares[id] || 1; // Default to 1 share if newly selected
+          } else {
+            delete newShares[id];
+          }
+          return newShares;
+        });
+      }
+      return newSelection;
+    });
   };
 
   const selectAllParticipants = () => {
-    setSelectedParticipants(participants.map(p => p.id));
+    const allParticipantIds = participants.map(p => p.id);
+    setSelectedParticipants(allParticipantIds);
+    if (splitType === 'shares') {
+      const newShares: { [key: number]: number } = {};
+      allParticipantIds.forEach(id => {
+        newShares[id] = currentSplitShares[id] || 1; // Keep existing shares or default to 1
+      });
+      setCurrentSplitShares(newShares);
+    }
   };
 
   const handleEditBill = (billId: string) => {
@@ -88,10 +123,22 @@ const BillManager: React.FC<BillManagerProps> = ({
       setSplits(billToEdit.splits);
       // For selected participants, we need to get all unique participant IDs from all splits
       const allSplitParticipantIds = new Set<number>();
+      const initialShares: { [key: number]: number } = {};
       billToEdit.splits.forEach(split => {
-        split.participantIds.forEach(id => allSplitParticipantIds.add(id));
+        if (split.shares) {
+          setSplitType('shares'); // If any split has shares, assume shares mode for editing
+          for (const participantId in split.shares) {
+            const id = Number(participantId);
+            allSplitParticipantIds.add(id);
+            initialShares[id] = split.shares[id];
+          }
+        } else {
+          setSplitType('equal'); // Otherwise, assume equal mode
+          split.participantIds.forEach(id => allSplitParticipantIds.add(id));
+        }
       });
       setSelectedParticipants(Array.from(allSplitParticipantIds));
+      setCurrentSplitShares(initialShares);
       setCurrentSplitAmount(''); // Clear current split input
       setCurrentSplitDescription(''); // Clear current split description
     }
@@ -171,6 +218,32 @@ const BillManager: React.FC<BillManagerProps> = ({
 
               {/* Add Split */}
               <div className="space-y-3 mb-4">
+                {/* Split Type Selection */}
+                <div className="flex gap-4 mb-3">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      className="form-radio text-green-600"
+                      name="splitType"
+                      value="equal"
+                      checked={splitType === 'equal'}
+                      onChange={() => setSplitType('equal')}
+                    />
+                    <span className="ml-2 text-gray-700">Equal Split</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      className="form-radio text-green-600"
+                      name="splitType"
+                      value="shares"
+                      checked={splitType === 'shares'}
+                      onChange={() => setSplitType('shares')}
+                    />
+                    <span className="ml-2 text-gray-700">Split by Shares</span>
+                  </label>
+                </div>
+
                 <input
                   type="number"
                   value={currentSplitAmount}
@@ -187,35 +260,87 @@ const BillManager: React.FC<BillManagerProps> = ({
                   className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
 
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">Select participants:</span>
-                    <button
-                      onClick={selectAllParticipants}
-                      className="text-xs text-green-600 hover:text-green-700"
-                    >
-                      Select All
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {participants.map(participant => (
+                {splitType === 'equal' && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Select participants:</span>
                       <button
-                        key={participant.id}
-                        onClick={() => toggleParticipant(participant.id)}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedParticipants.includes(participant.id)
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
+                        onClick={selectAllParticipants}
+                        className="text-xs text-green-600 hover:text-green-700"
                       >
-                        {participant.name}
+                        Select All
                       </button>
-                    ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {participants.map(participant => (
+                        <button
+                          key={participant.id}
+                          onClick={() => toggleParticipant(participant.id)}
+                          className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedParticipants.includes(participant.id)
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                        >
+                          {participant.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {splitType === 'shares' && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Assign shares:</span>
+                      <button
+                        onClick={selectAllParticipants}
+                        className="text-xs text-green-600 hover:text-green-700"
+                      >
+                        Select All
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {participants.map(participant => (
+                        <div key={participant.id} className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleParticipant(participant.id)}
+                            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedParticipants.includes(participant.id)
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                          >
+                            {participant.name}
+                          </button>
+                          {selectedParticipants.includes(participant.id) && (
+                            <input
+                              type="number"
+                              value={currentSplitShares[participant.id] || ''}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value);
+                                setCurrentSplitShares(prev => ({
+                                  ...prev,
+                                  [participant.id]: isNaN(value) ? 0 : value,
+                                }));
+                              }}
+                              placeholder="Shares"
+                              className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <button
                   onClick={handleAddSplit}
-                  disabled={!currentSplitAmount || selectedParticipants.length === 0 || parseFloat(currentSplitAmount) > remainingAmount}
+                  disabled={
+                    !currentSplitAmount ||
+                    parseFloat(currentSplitAmount) <= 0 ||
+                    parseFloat(currentSplitAmount) > remainingAmount ||
+                    (splitType === 'equal' && selectedParticipants.length === 0) ||
+                    (splitType === 'shares' && (selectedParticipants.length === 0 || Object.values(currentSplitShares).every(share => share === 0)))
+                  }
                   className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Add Split
@@ -234,9 +359,16 @@ const BillManager: React.FC<BillManagerProps> = ({
                           <span className=" text-gray-500"> ({split.description})</span>
                         )}
                         <div className="text-sm text-gray-600">
-                          Split among: {split.participantIds.map(id =>
-                            participants.find(p => p.id === id)?.name
-                          ).join(', ')}
+                          Split among: {split.shares ?
+                            Object.keys(split.shares).map(id => {
+                              const participant = participants.find(p => p.id === Number(id));
+                              return `${participant?.name} (${split.shares![Number(id)]} shares)`;
+                            }).join(', ')
+                            :
+                            split.participantIds.map(id =>
+                              participants.find(p => p.id === id)?.name
+                            ).join(', ')
+                          }
                         </div>
                       </div>
                       <button
@@ -273,6 +405,8 @@ const BillManager: React.FC<BillManagerProps> = ({
                 setDescription('');
                 setCurrentSplitDescription('');
                 setEditingBillId(null);
+                setSplitType('equal'); // Reset split type
+                setCurrentSplitShares({}); // Reset shares
               }}
               className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
             >
@@ -323,10 +457,17 @@ const BillManager: React.FC<BillManagerProps> = ({
               <div className="text-sm text-gray-600 mb-2">
                 <div className="font-medium">Splits:</div>
                 {bill.splits.map((split, splitIndex) => (
-                  <div key={splitIndex} className="ml-2">
-                    ₹{split.amount.toFixed(2)} → {split.participantIds.map(id =>
-                      participants.find(p => p.id === id)?.name
-                    ).join(', ')}
+                    <div key={splitIndex} className="ml-2">
+                    ₹{split.amount.toFixed(2)} → {split.shares ?
+                      Object.keys(split.shares).map(id => {
+                        const participant = participants.find(p => p.id === Number(id));
+                        return `${participant?.name} (${split.shares![Number(id)]} shares)`;
+                      }).join(', ')
+                      :
+                      split.participantIds.map(id =>
+                        participants.find(p => p.id === id)?.name
+                      ).join(', ')
+                    }
                     {split.description && (
                       <span className="italic text-gray-500"> ({split.description})</span>
                     )}
