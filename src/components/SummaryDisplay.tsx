@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, TrendingUp, Wallet } from 'lucide-react';
+import { Calculator, TrendingUp, Wallet, Percent } from 'lucide-react';
 import { Participant, Bill } from '../types';
 
 interface SummaryDisplayProps {
@@ -15,8 +15,51 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
   bills,
   className
 }) => {
-  const totalAmount = Object.values(amounts).reduce((sum, amount) => sum + amount, 0);
-  const averageAmount = participants.length > 0 ? totalAmount / participants.length : 0;
+  const totalAmount = bills.reduce((sum, bill) => sum + bill.total, 0);
+  const totalDiscount = bills.reduce((sum, bill) => sum + (bill.discount?.amount || 0), 0);
+  const finalAmount = totalAmount - totalDiscount;
+  const averageAmount = participants.length > 0 ? finalAmount / participants.length : 0;
+
+  const individualDiscounts: { [key: number]: number } = React.useMemo(() => {
+    const discounts: { [key: number]: number } = {};
+    participants.forEach(p => (discounts[p.id] = 0));
+
+    bills.forEach(bill => {
+      if (bill.discount) {
+        const discountAmount = bill.discount.amount;
+        if (bill.discount.splitType === 'proportional') {
+          // For proportional, distribute based on their share of the bill's total
+          // This requires knowing each participant's contribution to the bill before discount
+          // For simplicity, let's assume it's proportional to their total 'amounts' for now
+          // A more accurate calculation would involve re-calculating each person's share of *that specific bill*
+          // For now, we'll distribute based on their overall share of the total bill amount
+          const billParticipants = bill.splits.flatMap(split => 
+            split.participantIds || Object.keys(split.shares || {}).map(Number)
+          );
+          const uniqueBillParticipants = [...new Set(billParticipants)];
+          const totalBillAmountForParticipants = uniqueBillParticipants.reduce((sum, pId) => sum + (amounts[pId] || 0), 0);
+
+          uniqueBillParticipants.forEach(pId => {
+            if (totalBillAmountForParticipants > 0) {
+              const participantShare = (amounts[pId] || 0) / totalBillAmountForParticipants;
+              discounts[pId] += discountAmount * participantShare;
+            }
+          });
+
+        } else if (bill.discount.splitType === 'shares' && bill.discount.shares) {
+          const totalShares = Object.values(bill.discount.shares).reduce((sum, share) => sum + share, 0);
+          if (totalShares > 0) {
+            for (const participantId in bill.discount.shares) {
+              const pId = Number(participantId);
+              const share = bill.discount.shares[pId];
+              discounts[pId] += (discountAmount * share) / totalShares;
+            }
+          }
+        }
+      }
+    });
+    return discounts;
+  }, [bills, participants, amounts]);
 
   // Sort participants by amount owed (descending)
   const sortedParticipants = [...participants].sort((a, b) => (amounts[b.id] || 0) - (amounts[a.id] || 0));
@@ -52,14 +95,21 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
             {/* Total Stats */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-100">
-                <div className="text-green-600 text-sm font-medium mb-1">Total Amount</div>
-                <div className="text-2xl font-bold text-green-700">₹{totalAmount.toFixed(2)}</div>
+                <div className="text-green-600 text-sm font-medium mb-1">Final Amount</div>
+                <div className="text-2xl font-bold text-green-700">₹{finalAmount.toFixed(2)}</div>
               </div>
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
                 <div className="text-blue-600 text-sm font-medium mb-1">Average Per Person</div>
                 <div className="text-2xl font-bold text-blue-700">₹{averageAmount.toFixed(2)}</div>
               </div>
             </div>
+
+            {totalDiscount > 0 && (
+              <div className="flex items-center justify-center gap-2 p-3 mb-4 bg-yellow-50/80 rounded-xl border border-yellow-200 text-yellow-800">
+                <Percent className="w-5 h-5" />
+                <span>Total discount of <span className="font-bold">₹{totalDiscount.toFixed(2)}</span> applied!</span>
+              </div>
+            )}
 
             {/* Individual Amounts */}
             <div className="space-y-3">
@@ -70,7 +120,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
               
               {sortedParticipants.map((participant, index) => {
                 const amount = amounts[participant.id] || 0;
-                const percentage = totalAmount > 0 ? (amount / totalAmount) * 100 : 0;
+                const percentage = finalAmount > 0 ? (amount / finalAmount) * 100 : 0;
                 
                 return (
                   <div key={participant.id} className="relative">
@@ -91,6 +141,9 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-lg text-gray-800">₹{amount.toFixed(2)}</div>
+                        {totalDiscount > 0 && individualDiscounts[participant.id] > 0 && (
+                          <div className="text-xs text-green-600">-₹{individualDiscounts[participant.id].toFixed(2)} discount</div>
+                        )}
                         {amount > averageAmount && (
                           <div className="text-xs text-red-600">+₹{(amount - averageAmount).toFixed(2)} above avg</div>
                         )}

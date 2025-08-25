@@ -10,6 +10,13 @@ export interface BillSplit {
   shares?: { [key: number]: number };
 }
 
+
+export interface Discount {
+  amount: number;
+  splitType: 'proportional' | 'shares';
+  shares?: { [key: number]: number };
+}
+
 export interface Bill {
   id: string;
   total: number;
@@ -17,4 +24,5 @@ export interface Bill {
   remainingAmount: number;
   createdAt: Date;
   description: string;
+  discount?: Discount;
 }

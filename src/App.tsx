@@ -117,7 +117,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 backdrop-blur-sm px-8 py-4 rounded-full  mb-4">
             <Calculator className="w-8 h-8 text-blue-600" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
@@ -126,6 +126,9 @@ function App() {
           </div>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
             Split bills easily among friends and family. Add participants, enter bills, and let us calculate who owes what.
+          </p>
+          <p className="text-green-600 text-md font-semibold mt-4">
+            ✨ Now with Discount splitting feature! ✨
           </p>
         </div>
 

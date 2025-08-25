@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Receipt, Trash2, DollarSign, Pencil } from 'lucide-react';
-import { Participant, Bill, BillSplit } from '../types';
+import { Plus, Receipt, Trash2, DollarSign, Pencil, Percent } from 'lucide-react';
+import { Participant, Bill, BillSplit, Discount } from '../types';
 
 interface BillManagerProps {
   participants: Participant[];
@@ -27,9 +27,15 @@ const BillManager: React.FC<BillManagerProps> = ({
   const [selectedParticipants, setSelectedParticipants] = useState<number[]>([]);
   const [splitType, setSplitType] = useState<'equal' | 'shares'>('equal');
   const [currentSplitShares, setCurrentSplitShares] = useState<{ [key: number]: number }>({});
+  const [discountAmount, setDiscountAmount] = useState('');
+  const [discountSplitType, setDiscountSplitType] = useState<'proportional' | 'shares'>('proportional');
+  const [discountShares, setDiscountShares] = useState<{ [key: number]: number }>({});
+  const [selectedDiscountParticipants, setSelectedDiscountParticipants] = useState<number[]>([]);
+  const [showDiscount, setShowDiscount] = useState(false);
 
   const totalSplitAmount = splits.reduce((sum, split) => sum + split.amount, 0);
-  const remainingAmount = parseFloat(totalAmount || '0') - totalSplitAmount;
+  const billTotalWithDiscount = (parseFloat(totalAmount) || 0) + (parseFloat(discountAmount) || 0);
+  const remainingAmount = billTotalWithDiscount - totalSplitAmount;
 
   const handleAddSplit = () => {
     const amount = parseFloat(currentSplitAmount);
@@ -59,13 +65,24 @@ const BillManager: React.FC<BillManagerProps> = ({
   const handleSubmitBill = () => {
     const total = parseFloat(totalAmount);
     if (total > 0) {
+      let discount: Discount | undefined = undefined;
+      const parsedDiscount = parseFloat(discountAmount);
+      if (parsedDiscount > 0) {
+        discount = {
+          amount: parsedDiscount,
+          splitType: discountSplitType,
+          shares: discountSplitType === 'shares' ? discountShares : undefined,
+        };
+      }
+
       const billToSave: Bill = {
         id: editingBillId || Date.now().toString(),
-        total,
+        total: billTotalWithDiscount,
         splits,
         remainingAmount: Math.max(0, remainingAmount),
         createdAt: editingBillId ? bills.find(b => b.id === editingBillId)?.createdAt || new Date() : new Date(),
-        description: description
+        description: description,
+        discount,
       };
       onSaveBill(billToSave);
 
@@ -80,6 +97,11 @@ const BillManager: React.FC<BillManagerProps> = ({
       setEditingBillId(null);
       setSplitType('equal'); // Reset split type
       setCurrentSplitShares({}); // Reset shares
+      setDiscountAmount('');
+      setDiscountSplitType('proportional');
+      setDiscountShares({});
+      setSelectedDiscountParticipants([]);
+      setShowDiscount(false);
     }
   };
 
@@ -101,6 +123,30 @@ const BillManager: React.FC<BillManagerProps> = ({
     });
   };
 
+  const toggleDiscountParticipant = (id: number) => {
+    setSelectedDiscountParticipants(prev => {
+      const newSelection = prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id];
+      setDiscountShares(prevShares => {
+        const newShares = { ...prevShares };
+        if (newSelection.includes(id)) {
+          newShares[id] = newShares[id] || 1; // Default to 1 share if newly selected
+        } else {
+          delete newShares[id];
+        }
+        return newShares;
+      });
+      return newSelection;
+    });
+  };
+
+  const handleRemoveDiscount = () => {
+    setDiscountAmount('');
+    setDiscountSplitType('proportional');
+    setDiscountShares({});
+    setSelectedDiscountParticipants([]);
+    setShowDiscount(false);
+  };
+
   const selectAllParticipants = () => {
     const allParticipantIds = participants.map(p => p.id);
     setSelectedParticipants(allParticipantIds);
@@ -113,34 +159,53 @@ const BillManager: React.FC<BillManagerProps> = ({
     }
   };
 
+  const selectAllDiscountParticipants = () => {
+    const allParticipantIds = participants.map(p => p.id);
+    setSelectedDiscountParticipants(allParticipantIds);
+    const newShares: { [key: number]: number } = {};
+    allParticipantIds.forEach(id => {
+      newShares[id] = discountShares[id] || 1; // Keep existing shares or default to 1
+    });
+    setDiscountShares(newShares);
+  };
+
   const handleEditBill = (billId: string) => {
     const billToEdit = bills.find(bill => bill.id === billId);
     if (billToEdit) {
       setEditingBillId(billId);
       setIsAdding(true);
-      setTotalAmount(billToEdit.total.toString());
+      setTotalAmount((billToEdit.total - (billToEdit.discount?.amount || 0)).toString());
       setDescription(billToEdit.description);
       setSplits(billToEdit.splits);
-      // For selected participants, we need to get all unique participant IDs from all splits
+      if (billToEdit.discount) {
+        setShowDiscount(true);
+        setDiscountAmount(billToEdit.discount.amount.toString());
+        setDiscountSplitType(billToEdit.discount.splitType);
+        if (billToEdit.discount.shares) {
+          setDiscountShares(billToEdit.discount.shares);
+          setSelectedDiscountParticipants(Object.keys(billToEdit.discount.shares).map(Number));
+        }
+      }
+
       const allSplitParticipantIds = new Set<number>();
       const initialShares: { [key: number]: number } = {};
       billToEdit.splits.forEach(split => {
         if (split.shares) {
-          setSplitType('shares'); // If any split has shares, assume shares mode for editing
+          setSplitType('shares');
           for (const participantId in split.shares) {
             const id = Number(participantId);
             allSplitParticipantIds.add(id);
             initialShares[id] = split.shares[id];
           }
         } else {
-          setSplitType('equal'); // Otherwise, assume equal mode
+          setSplitType('equal');
           split.participantIds.forEach(id => allSplitParticipantIds.add(id));
         }
       });
       setSelectedParticipants(Array.from(allSplitParticipantIds));
       setCurrentSplitShares(initialShares);
-      setCurrentSplitAmount(''); // Clear current split input
-      setCurrentSplitDescription(''); // Clear current split description
+      setCurrentSplitAmount('');
+      setCurrentSplitDescription('');
     }
   };
 
@@ -181,13 +246,13 @@ const BillManager: React.FC<BillManagerProps> = ({
           {/* Total Amount */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Total Bill Amount (₹)
+              Paid Bill Amount (₹)
             </label>
             <input
               type="number"
               value={totalAmount}
               onChange={(e) => setTotalAmount(e.target.value)}
-              placeholder="Enter total amount"
+              placeholder="Enter paid amount"
               className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
@@ -206,11 +271,112 @@ const BillManager: React.FC<BillManagerProps> = ({
             />
           </div>
 
+          {/* Discount Section */}
+          {!showDiscount ? (
+            <button
+              onClick={() => setShowDiscount(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 mb-4 text-sm font-medium text-green-700 bg-green-100 rounded-lg hover:bg-green-200 transition-colors"
+            >
+              <Percent className="w-4 h-4" />
+              Add Discount
+            </button>
+          ) : (
+            <div className="mb-4 p-4 bg-green-100/80 rounded-xl border border-green-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-800">Discount Details</h4>
+                <button
+                  onClick={handleRemoveDiscount}
+                  className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
+                >
+                  <Trash2 className="w-4 h-4" /> Remove Discount
+                </button>
+              </div>
+              <input
+                type="number"
+                value={discountAmount}
+                onChange={(e) => setDiscountAmount(e.target.value)}
+                placeholder="Enter discount amount (Optional)"
+                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              {parseFloat(discountAmount) > 0 && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex gap-4">
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        className="form-radio text-green-600"
+                        name="discountSplitType"
+                        value="proportional"
+                        checked={discountSplitType === 'proportional'}
+                        onChange={() => setDiscountSplitType('proportional')}
+                      />
+                      <span className="ml-2 text-gray-700">Split Proportionally</span>
+                    </label>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        className="form-radio text-green-600"
+                        name="discountSplitType"
+                        value="shares"
+                        checked={discountSplitType === 'shares'}
+                        onChange={() => setDiscountSplitType('shares')}
+                      />
+                      <span className="ml-2 text-gray-700">Split by Shares</span>
+                    </label>
+                  </div>
+                  {discountSplitType === 'shares' && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-700">Assign shares:</span>
+                        <button
+                          onClick={selectAllDiscountParticipants}
+                          className="text-xs text-green-600 hover:text-green-700"
+                        >
+                          Select All
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {participants.map(participant => (
+                          <div key={participant.id} className="flex items-center gap-2">
+                            <button
+                              onClick={() => toggleDiscountParticipant(participant.id)}
+                              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedDiscountParticipants.includes(participant.id)
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
+                            >
+                              {participant.name}
+                            </button>
+                            {selectedDiscountParticipants.includes(participant.id) && (
+                              <input
+                                type="number"
+                                value={discountShares[participant.id] || ''}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value);
+                                  setDiscountShares(prev => ({
+                                    ...prev,
+                                    [participant.id]: isNaN(value) ? 0 : value,
+                                  }));
+                                }}
+                                placeholder="Shares"
+                                className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm"
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Split Section */}
           {parseFloat(totalAmount || '0') > 0 && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-gray-800">Split Amounts</h4>
+                <h4 className="font-medium text-gray-800">{showDiscount ? `Split Bill (Original Amount: ₹${billTotalWithDiscount.toFixed(2)})` : "Split Bill"}</h4>
                 <div className="text-sm text-gray-600">
                   Remaining: ₹{remainingAmount.toFixed(2)}
                 </div>
@@ -251,6 +417,9 @@ const BillManager: React.FC<BillManagerProps> = ({
                   placeholder="Enter amount to split"
                   className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
+                {showDiscount && (
+                  <p className="text-xs text-red-500 mt-0">Enter the amount for this split *before* any discounts.</p>
+                )}
 
                 <input
                   type="text"
@@ -407,6 +576,11 @@ const BillManager: React.FC<BillManagerProps> = ({
                 setEditingBillId(null);
                 setSplitType('equal'); // Reset split type
                 setCurrentSplitShares({}); // Reset shares
+                setDiscountAmount('');
+                setDiscountSplitType('proportional');
+                setDiscountShares({});
+                setSelectedDiscountParticipants([]);
+                setShowDiscount(false);
               }}
               className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
             >
@@ -479,6 +653,12 @@ const BillManager: React.FC<BillManagerProps> = ({
             {bill.remainingAmount > 0 && (
               <div className="text-sm text-gray-600">
                 <span className="font-medium">Remaining amount:</span> ₹{bill.remainingAmount.toFixed(2)} (split equally)
+              </div>
+            )}
+
+            {bill.discount && (
+              <div className="text-sm text-green-600">
+                <span className="font-medium">Discount:</span> ₹{bill.discount.amount.toFixed(2)} (split {bill.discount.splitType})
               </div>
             )}
           </div>
